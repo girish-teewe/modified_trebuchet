@@ -87,6 +87,7 @@ import android.util.Log;
 import android.util.Pair;
 import android.view.ContextThemeWrapper;
 import android.view.Display;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
@@ -155,11 +156,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Launcher extends Activity
         implements View.OnClickListener, OnLongClickListener, LauncherModel.Callbacks,
                    View.OnTouchListener, PageSwitchListener, LauncherProviderChangeListener,
-                   PopupMenu.OnDismissListener {
+                   PopupMenu.OnDismissListener, GestureDetector.OnGestureListener {
     static final String TAG = "Launcher";
     static final boolean LOGD = false;
 
     DeviceProfile mGrid;
+
+    GestureDetector gestureScanner;
 
     static final boolean PROFILE_STARTUP = false;
     static final boolean DEBUG_WIDGETS = false;
@@ -254,9 +257,70 @@ public class Launcher extends Activity
 
     public static final String USER_HAS_MIGRATED = "launcher.user_migrated_from_old_data";
 
+    private int swipe_Min_Distance = 100;
+    private int swipe_Max_Distance = 550;
+    private int swipe_Min_Velocity = 250;
+
     @Override
     public void onDismiss(PopupMenu popupMenu) {
         mPopupMenu = null;
+    }
+
+    @Override
+    public boolean onDown(MotionEvent e) {
+        return true;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent e) {
+
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent e) {
+        return false;
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent e) {
+
+    }
+
+    @Override
+    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        final float xDistance = Math.abs(e1.getX() - e2.getX());
+        final float yDistance = Math.abs(e1.getY() - e2.getY());
+
+        Log.d("EMMA-LAUNCHER", "Fling with velocityY: " + velocityY + ", yDistance: " + yDistance);
+
+        if(yDistance > this.swipe_Max_Distance || xDistance > yDistance)
+            return false;
+
+        velocityY = Math.abs(velocityY);
+
+        if(velocityY > this.swipe_Min_Velocity && yDistance > this.swipe_Min_Distance){
+            if(e1.getY() < e2.getY()) {
+                if(mWorkspace!=null && !mWorkspace.workspaceInModalState()) {
+                    launchEmma();
+                }
+            }
+        }
+
+
+        return false;
+    }
+
+    private void launchEmma() {
+        PackageManager pm = getPackageManager();
+        Intent intent = pm.getLaunchIntentForPackage("com.mmce.hachi.search");
+        if(intent!=null) {
+            startActivity(intent);
+        }
     }
 
     /** The different states that Launcher can be in. */
@@ -532,7 +596,7 @@ public class Launcher extends Activity
 
         checkForLocaleChange();
         setContentView(R.layout.launcher);
-
+        gestureScanner = new GestureDetector(this, this);
         setupViews();
         mGrid.layout(this);
 
@@ -1640,7 +1704,7 @@ public class Launcher extends Activity
         mWorkspace = (Workspace) mDragLayer.findViewById(R.id.workspace);
         mWorkspace.setPageSwitchListener(this);
         mPageIndicators = mDragLayer.findViewById(R.id.page_indicator);
-
+        mWorkspace.setGestureDetector(gestureScanner);
         mLauncherView.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         mWorkspaceBackgroundDrawable = getResources().getDrawable(R.drawable.workspace_bg);

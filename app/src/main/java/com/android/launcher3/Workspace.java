@@ -57,6 +57,7 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.Choreographer;
 import android.view.Display;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -147,6 +148,7 @@ public class Workspace extends SmoothPagedView
 
     private Runnable mRemoveEmptyScreenRunnable;
     private boolean mDeferRemoveExtraEmptyScreen = false;
+    private GestureDetector gestureDetector;
 
     /**
      * CellInfo for the cell that is currently being dragged
@@ -374,6 +376,14 @@ public class Workspace extends SmoothPagedView
         // Disable multitouch across the workspace/all apps/customize tray
         setMotionEventSplittingEnabled(true);
         setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+    }
+
+    public GestureDetector getGestureDetector() {
+        return gestureDetector;
+    }
+
+    public void setGestureDetector(GestureDetector gestureDetector) {
+        this.gestureDetector = gestureDetector;
     }
 
     @Override
@@ -1136,6 +1146,9 @@ public class Workspace extends SmoothPagedView
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if(gestureDetector!=null) {
+            gestureDetector.onTouchEvent(ev);
+        }
         switch (ev.getAction() & MotionEvent.ACTION_MASK) {
         case MotionEvent.ACTION_DOWN:
             mXDown = ev.getX();
